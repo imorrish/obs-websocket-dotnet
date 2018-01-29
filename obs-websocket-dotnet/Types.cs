@@ -55,21 +55,22 @@ namespace OBSWebsocketDotNet
     }
 
     /// <summary>
-    /// Called by <see cref="OBSWebsocket.OnSceneChange"/>
+    /// Called by <see cref="OBSWebsocket.SceneChanged"/>
     /// </summary>
     /// <param name="sender"><see cref="OBSWebsocket"/> instance</param>
     /// <param name="newSceneName">Name of the new current scene</param>
     public delegate void SceneChangeCallback(OBSWebsocket sender, string newSceneName);
 
     /// <summary>
-    /// Called by <see cref="OBSWebsocket.OnSourceOrderChange"/>
+    /// Called by <see cref="OBSWebsocket.SourceOrderChanged"/>
     /// </summary>
     /// <param name="sender"><see cref="OBSWebsocket"/> instance</param>
     /// <param name="sceneName">Name of the scene where items where reordered</param>
     public delegate void SourceOrderChangeCallback(OBSWebsocket sender, string sceneName);
 
     /// <summary>
-    /// Called by <see cref="OBSWebsocket.OnSceneItemVisibilityChange"/>, <see cref="OBSWebsocket.OnSceneItemAdded"/> or <see cref="OBSWebsocket.OnSceneItemRemoved"/> 
+    /// Called by <see cref="OBSWebsocket.SceneItemVisibilityChanged"/>, <see cref="OBSWebsocket.SceneItemAdded"/>
+    /// or <see cref="OBSWebsocket.SceneItemRemoved"/>
     /// </summary>
     /// <param name="sender"><see cref="OBSWebsocket"/> instance</param>
     /// <param name="sceneName">Name of the scene where the item is</param>
@@ -77,32 +78,40 @@ namespace OBSWebsocketDotNet
     public delegate void SceneItemUpdateCallback(OBSWebsocket sender, string sceneName, string itemName);
 
     /// <summary>
-    /// Called by <see cref="OBSWebsocket.OnTransitionChange"/> 
+    /// Called by <see cref="OBSWebsocket.TransitionChanged"/>
     /// </summary>
     /// <param name="sender"><see cref="OBSWebsocket"/> instance</param>
     /// <param name="newTransitionName">Name of the new selected transition</param>
     public delegate void TransitionChangeCallback(OBSWebsocket sender, string newTransitionName);
 
     /// <summary>
-    /// Called by <see cref="OBSWebsocket.OnTransitionDurationChange"/>
+    /// Called by <see cref="OBSWebsocket.TransitionDurationChanged"/>
     /// </summary>
     /// <param name="sender"><see cref="OBSWebsocket"/> instance</param>
     /// <param name="newDuration">Name of the new transition duration (in milliseconds)</param>
     public delegate void TransitionDurationChangeCallback(OBSWebsocket sender, int newDuration);
 
     /// <summary>
-    /// Called by <see cref="OBSWebsocket.OnStreamingStateChange"/> or <see cref="OBSWebsocket.OnRecordingStateChange"/>
+    /// Called by <see cref="OBSWebsocket.StreamingStateChanged"/>, <see cref="OBSWebsocket.RecordingStateChanged"/>
+    /// or <see cref="OBSWebsocket.ReplayBufferStateChanged"/> 
     /// </summary>
     /// <param name="sender"><see cref="OBSWebsocket"/> instance</param>
     /// <param name="type">New output state</param>
     public delegate void OutputStateCallback(OBSWebsocket sender, OutputState type);
 
     /// <summary>
-    /// Called by <see cref="OBSWebsocket.OnStreamStatus"/>
+    /// Called by <see cref="OBSWebsocket.StreamStatus"/>
     /// </summary>
     /// <param name="sender"><see cref="OBSWebsocket"/> instance</param>
     /// <param name="status">Stream status data</param>
-    public delegate void StreamStatusCallback(OBSWebsocket sender, OBSStreamStatus status);
+    public delegate void StreamStatusCallback(OBSWebsocket sender, StreamStatus status);
+
+    /// <summary>
+    /// Called by <see cref="OBSWebsocket.StudioModeSwitched"/>
+    /// </summary>
+    /// <param name="sender"><see cref="OBSWebsocket"/> instance</param>
+    /// <param name="enabled">New Studio Mode status</param>
+    public delegate void StudioModeChangeCallback(OBSWebsocket sender, bool enabled);
 
     /// <summary>
     /// Describes a scene in OBS, along with its items
@@ -117,7 +126,7 @@ namespace OBSWebsocketDotNet
         /// <summary>
         /// Scene item list
         /// </summary>
-        public List<OBSSceneItem> Items;
+        public List<SceneItem> Items;
 
         /// <summary>
         /// Builds the object from the JSON description
@@ -126,12 +135,12 @@ namespace OBSWebsocketDotNet
         public OBSScene(JObject data)
         {
             Name = (string)data["name"];
-            Items = new List<OBSSceneItem>();
+            Items = new List<SceneItem>();
 
             var sceneItems = (JArray)data["sources"];
             foreach (JObject item in sceneItems)
             {
-                Items.Add(new OBSSceneItem(item));
+                Items.Add(new SceneItem(item));
             }
         }
     }
@@ -139,7 +148,7 @@ namespace OBSWebsocketDotNet
     /// <summary>
     /// Describes a scene item in an OBS scene
     /// </summary>
-    public struct OBSSceneItem
+    public struct SceneItem
     {
         /// <summary>
         /// Source name
@@ -190,7 +199,7 @@ namespace OBSWebsocketDotNet
         /// Builds the object from the JSON scene description
         /// </summary>
         /// <param name="data">JSON item description as a <see cref="JObject"/></param>
-        public OBSSceneItem(JObject data)
+        public SceneItem(JObject data)
         {
             SourceName = (string)data["name"];
             InternalType = (string)data["type"];
@@ -243,11 +252,6 @@ namespace OBSWebsocketDotNet
     public struct OBSVersion
     {
         /// <summary>
-        /// obs-websocket protocol version
-        /// </summary>
-        public readonly string APIVersion;
-
-        /// <summary>
         /// obs-websocket plugin version
         /// </summary>
         public readonly string PluginVersion;
@@ -263,7 +267,6 @@ namespace OBSWebsocketDotNet
         /// <param name="data">JSON response body as a <see cref="JObject"/></param>
         public OBSVersion(JObject data)
         {
-            APIVersion = (string)data["version"];
             PluginVersion = (string)data["obs-websocket-version"];
             OBSStudioVersion = (string)data["obs-studio-version"];
         }
@@ -272,7 +275,7 @@ namespace OBSWebsocketDotNet
     /// <summary>
     /// Data of a stream status update
     /// </summary>
-    public struct OBSStreamStatus
+    public struct StreamStatus
     {
         /// <summary>
         /// True if streaming is started and running, false otherwise
@@ -283,7 +286,7 @@ namespace OBSWebsocketDotNet
         /// True if recording is started and running, false otherwise
         /// </summary>
         public readonly bool Recording;
-        
+
         /// <summary>
         /// Stream bitrate in bytes per second
         /// </summary>
@@ -323,7 +326,7 @@ namespace OBSWebsocketDotNet
         /// Builds the object from the JSON event body
         /// </summary>
         /// <param name="data">JSON event body as a <see cref="JObject"/></param>
-        public OBSStreamStatus(JObject data)
+        public StreamStatus(JObject data)
         {
             Streaming = (bool)data["streaming"];
             Recording = (bool)data["recording"];
@@ -342,7 +345,7 @@ namespace OBSWebsocketDotNet
     /// <summary>
     /// Status of streaming output and recording output
     /// </summary>
-    public struct OBSOutputStatus
+    public struct OutputStatus
     {
         /// <summary>
         /// True if streaming is started and running, false otherwise
@@ -358,7 +361,7 @@ namespace OBSWebsocketDotNet
         /// Builds the object from the JSON response body
         /// </summary>
         /// <param name="data">JSON response body as a <see cref="JObject"/></param>
-        public OBSOutputStatus(JObject data)
+        public OutputStatus(JObject data)
         {
             IsStreaming = (bool)data["streaming"];
             IsRecording = (bool)data["recording"];
@@ -368,7 +371,7 @@ namespace OBSWebsocketDotNet
     /// <summary>
     /// Current transition settings
     /// </summary>
-    public struct OBSCurrentTransitionInfo
+    public struct TransitionSettings
     {
         /// <summary>
         /// Transition name
@@ -384,7 +387,7 @@ namespace OBSWebsocketDotNet
         /// Builds the object from the JSON response body
         /// </summary>
         /// <param name="data">JSON response body as a <see cref="JObject"/></param>
-        public OBSCurrentTransitionInfo(JObject data)
+        public TransitionSettings(JObject data)
         {
             Name = (string)data["name"];
             Duration = (int)data["duration"];
@@ -394,7 +397,7 @@ namespace OBSWebsocketDotNet
     /// <summary>
     /// Volume settings of an OBS source
     /// </summary>
-    public struct OBSVolumeInfo
+    public struct VolumeInfo
     {
         /// <summary>
         /// Source volume in linear scale (0.0 to 1.0)
@@ -410,10 +413,236 @@ namespace OBSWebsocketDotNet
         /// Builds the object from the JSON response body
         /// </summary>
         /// <param name="data">JSON response body as a <see cref="JObject"/></param>
-        public OBSVolumeInfo(JObject data)
+        public VolumeInfo(JObject data)
         {
             Volume = (float)data["volume"];
             Muted = (bool)data["muted"];
+        }
+    }
+
+    /// <summary>
+    /// Streaming settings
+    /// </summary>
+    public struct StreamingService
+    {
+        /// <summary>
+        /// Type of streaming service
+        /// </summary>
+        public string Type;
+
+        /// <summary>
+        /// Streaming service settings (JSON data)
+        /// </summary>
+        public JObject Settings;
+    }
+
+    /// <summary>
+    /// Common RTMP settings (predefined streaming services list)
+    /// </summary>
+    public struct CommonRTMPStreamingService
+    {
+        /// <summary>
+        /// Streaming provider name
+        /// </summary>
+        public string ServiceName;
+
+        /// <summary>
+        /// Streaming server URL;
+        /// </summary>
+        public string ServerUrl;
+
+        /// <summary>
+        /// Stream key
+        /// </summary>
+        public string StreamKey;
+
+        /// <summary>
+        /// Construct object from data provided by <see cref="StreamingService.Settings"/>
+        /// </summary>
+        /// <param name="settings"></param>
+        public CommonRTMPStreamingService(JObject settings)
+        {
+            ServiceName = (string)settings["service"];
+            ServerUrl = (string)settings["server"];
+            StreamKey = (string)settings["key"];
+        }
+
+        /// <summary>
+        /// Convert to JSON object
+        /// </summary>
+        /// <returns></returns>
+        public JObject ToJSON()
+        {
+            var obj = new JObject();
+            obj.Add("service", ServiceName);
+            obj.Add("server", ServerUrl);
+            obj.Add("key", StreamKey);
+            return obj;
+        }
+    }
+
+    /// <summary>
+    /// Custom RTMP settings (fully customizable RTMP credentials)
+    /// </summary>
+    public struct CustomRTMPStreamingService
+    {
+        /// <summary>
+        /// RTMP server URL
+        /// </summary>
+        public string ServerAddress;
+
+        /// <summary>
+        /// RTMP stream key (URL suffix)
+        /// </summary>
+        public string StreamKey;
+
+        /// <summary>
+        /// Tell OBS' RTMP client to authenticate to the server
+        /// </summary>
+        public bool UseAuthentication;
+
+        /// <summary>
+        /// Username used if authentication is enabled
+        /// </summary>
+        public string AuthUsername;
+
+        /// <summary>
+        /// Password used if authentication is enabled
+        /// </summary>
+        public string AuthPassword;
+
+        /// <summary>
+        /// Construct object from data provided by <see cref="StreamingService.Settings"/>
+        /// </summary>
+        /// <param name="settings"></param>
+        public CustomRTMPStreamingService(JObject settings)
+        {
+            ServerAddress = (string)settings["server"];
+            StreamKey = (string)settings["key"];
+            UseAuthentication = (bool)settings["use_auth"];
+            AuthUsername = (string)settings["username"];
+            AuthPassword = (string)settings["password"];
+        }
+
+        /// <summary>
+        /// Convert to JSON object
+        /// </summary>
+        /// <returns></returns>
+        public JObject ToJSON()
+        {
+            var obj = new JObject();
+            obj.Add("server", ServerAddress);
+            obj.Add("key", StreamKey);
+            obj.Add("use_auth", UseAuthentication);
+            obj.Add("username", AuthUsername);
+            obj.Add("password", AuthPassword);
+            return obj;
+        }
+    }
+
+    /// <summary>
+    /// Crop coordinates for a scene item
+    /// </summary>
+    public struct SceneItemCropInfo
+    {
+        /// <summary>
+        /// Top crop (in pixels)
+        /// </summary>
+        public int Top;
+
+        /// <summary>
+        /// Bottom crop (in pixels)
+        /// </summary>
+        public int Bottom;
+
+        /// <summary>
+        /// Left crop (in pixels)
+        /// </summary>
+        public int Left;
+
+        /// <summary>
+        /// Right crop (in pixels)
+        /// </summary>
+        public int Right;
+    }
+
+    /// <summary>
+    /// BrowserSource source properties
+    /// </summary>
+    public struct BrowserSourceProperties
+    {
+        /// <summary>
+        /// URL to load in the embedded browser
+        /// </summary>
+        public string URL;
+
+        /// <summary>
+        /// true if the URL points to a local file, false otherwise.
+        /// </summary>
+        public bool IsLocalFile;
+
+        /// <summary>
+        /// Additional CSS to apply to the page
+        /// </summary>
+        public string CustomCSS;
+
+        /// <summary>
+        /// Embedded browser render (viewport) width
+        /// </summary>
+        public int Width;
+
+        /// <summary>
+        /// Embedded browser render (viewport) height
+        /// </summary>
+        public int Height;
+
+        /// <summary>
+        /// Embedded browser render frames per second
+        /// </summary>
+        public int FPS;
+
+        /// <summary>
+        /// true if source should be disabled (inactive) when not visible, false otherwise
+        /// </summary>
+        public bool ShutdownWhenNotVisible;
+
+        /// <summary>
+        /// true if source should be visible, false otherwise
+        /// </summary>
+        public bool Visible;
+
+        /// <summary>
+        /// Construct the object from JSON response data
+        /// </summary>
+        /// <param name="props"></param>
+        public BrowserSourceProperties(JObject props)
+        {
+            URL = (string)props["url"];
+            IsLocalFile = (bool)props["is_local_file"];
+            CustomCSS = (string)props["css"];
+            Width = (int)props["width"];
+            Height = (int)props["height"];
+            FPS = (int)props["fps"];
+            ShutdownWhenNotVisible = (bool)props["shutdown"];
+            Visible = (bool)props["render"];
+        }
+
+        /// <summary>
+        /// Convert the object back to JSON
+        /// </summary>
+        /// <returns></returns>
+        public JObject ToJSON()
+        {
+            var obj = new JObject();
+            obj.Add("url", URL);
+            obj.Add("is_local_file", IsLocalFile);
+            obj.Add("css", CustomCSS);
+            obj.Add("width", Width);
+            obj.Add("height", Height);
+            obj.Add("fps", FPS);
+            obj.Add("shutdown", ShutdownWhenNotVisible);
+            obj.Add("render", Visible);
+            return obj;
         }
     }
 
